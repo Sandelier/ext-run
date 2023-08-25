@@ -1,11 +1,14 @@
 #!/usr/bin/env node
+const createTempExtension = require('./handleExtensionFolder.js');
 
-function Webforge(browser, path, args) {
-    const filterValues = ValidateValues(browser, path, args);
-    if (filterValues.result) {
-
-    } else {
-        console.error(filterValues.error)
+class Webforge {
+    run(browser, path, args) {
+        const filterValues = ValidateValues(browser, path, args);
+        if (filterValues.result) {
+            createTempExtension(path);
+        } else {
+            console.error(filterValues.error);
+        }
     }
 }
 
@@ -44,13 +47,45 @@ function ValidateValues(browser, path, args = "") {
     return filterValues;
 }
 
+function validateBrowser(browser) {
+    const browserMappings = [
+        ['firefox', 'ff',],
+        ['chrome', 'ch'],
+        ['edge', 'msedge'],
+        ['brave', 'br']
+    ];
+
+    for (const mapping of browserMappings) {
+        if (mapping.includes(browser)) {
+            return mapping[0];
+        }
+    }
+
+    return false;
+}
 
 
-const [, , browser , path, ...optionalArgs] = process.argv;
+const [, , method, browser , path, ...optionalArgs] = process.argv;
 
-if (browser != undefined) {
-    const webforge = new Webforge();
-    webforge.run(browser, path, optionalArgs);
+if (method !== undefined) {
+    switch (method) {
+        case "-b":
+            // In the workings
+            break;
+
+        case "-r":
+            if (validateBrowser(browser) !== false) {
+                const webforge = new Webforge();
+                webforge.run(browser, path, optionalArgs);
+            } else {
+                console.error(`Unknown browser: ${browser}`);
+            }
+            break;
+
+        default:
+            console.error(`Unknown method: ${method}`);
+            break;
+    }
 } else {
-  console.log('Usage: web-forge <browser> <path> <optional arguments>');
+    console.log('Usage: web-forge <-b|-r> <path> <optional arguments>');
 }

@@ -5,6 +5,7 @@ const fs = require('fs');
 const server = new WebSocket.Server({ port: 46532 });
 const clients = new Set();
 
+// It should be that the websocket sends like an unique thing to the client so then you could have multiple connections.
 server.on('connection', (socket) => {
     console.log('Client connected');
     clients.add(socket);
