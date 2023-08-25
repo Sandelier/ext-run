@@ -1,0 +1,15 @@
+{
+  "name": "web-forge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main/main.js",
+  "bin": {
+    "web-forge": "./bin/web-forge"
+  },
+  "preferGlobal": true,
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.13.0"
+  }
+}

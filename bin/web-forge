@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+
+function Webforge(browser, path, args) {
+    const filterValues = ValidateValues(browser, path, args);
+    if (filterValues.result) {
+
+    } else {
+        console.error(filterValues.error)
+    }
+}
+
+
+function ValidateValues(browser, path, args = "") {
+    const filterValues = {
+        result: true,
+        error: 'Default',
+        launchArgs: ''
+    };
+
+    // Checks browser
+    switch (browser) {
+        case 'firefox':
+        case 'ff':
+
+            break;
+        case 'chrome':
+        case 'ch':
+            filterValues.launchArgs = `start chrome --user-data-dir=${cleanUserDir} --load-extension=${tempExtLocation} ${args}`;
+            break;
+        case 'edge':
+        case 'msedge':
+
+            break;
+        case 'brave':
+        case 'br':
+
+            break;
+        default:
+            filterValues.result = false;
+            filterValues.error = `Browser was unknown. Either it was wrong syntax or unknown browser. ${browser}`;
+            return filterValues;
+    }
+
+    return filterValues;
+}
+
+
+
+const [, , browser , path, ...optionalArgs] = process.argv;
+
+if (browser != undefined) {
+    const webforge = new Webforge();
+    webforge.run(browser, path, optionalArgs);
+} else {
+  console.log('Usage: web-forge <browser> <path> <optional arguments>');
+}
