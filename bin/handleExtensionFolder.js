@@ -35,11 +35,13 @@ async function createTempExtension(ext) {
     try {
         await fs.mkdir(tempDirPath);
         await fs.mkdir(path.join(tempDirPath, 'userFolder'));
+        await fs.mkdir(path.join(tempDirPath, 'extension'));
         const files = await fs.readdir(ext);
         
+        const tempExtensionPath = path.join(tempDirPath, 'extension');
         for (const file of files) {
             const extFilePath = path.join(ext, file);
-            const tempPath = path.join(tempDirPath, file);
+            const tempPath = path.join(tempExtensionPath, file);
             
             const stats = await fs.stat(extFilePath);
             if (stats.isDirectory()) {
@@ -50,7 +52,7 @@ async function createTempExtension(ext) {
                         manifestLock = true;
                         await Promise.all([
                             modifyManifest(extFilePath),
-                            addBackgroundScript(extFilePath)
+                            addBackgroundScript(tempPath)
                         ]);
                     }
                 } else {
@@ -76,14 +78,34 @@ async function modifyManifest(extFilePath) {
 
     parsedManifest.background.scripts.push("web-forge-AutoReloadBackground.js");
 
+    if (parsedManifest.content_security_policy) {
+        const newSources = "http://localhost:46532 ws://localhost:46532";
+        parsedManifest.content_security_policy = parsedManifest.content_security_policy
+            .replace(
+                /object-src 'self'/,
+                match => `${match} ${newSources};`
+            );
+
+        parsedManifest.content_security_policy = parsedManifest.content_security_policy
+            .replace(
+                /connect-src 'self'/,
+                match => `${match} ${newSources};`
+            );
+    }
+
+
+
     const modifiedManifestContent = JSON.stringify(parsedManifest, null, 2);
-    const tempManifestPath = path.join(tempDirPath, 'manifest.json');
+    const tempManifestPath = path.join(tempDirPath, 'extension', 'manifest.json');
     await fs.writeFile(tempManifestPath, modifiedManifestContent, 'utf-8');
 }
 
-async function addBackgroundScript(extFilePath) {
+async function addBackgroundScript(tempPathFile) {
+    const tempPathFolder = path.dirname(tempPathFile);
     const backgroundScriptPath = path.join(__dirname, "web-forge-AutoReloadBackground.js");
-    await fs.copyFile(backgroundScriptPath, path.join(extFilePath, "web-forge-AutoReloadBackground.js"));
+    const destPath = path.join(tempPathFolder, "web-forge-AutoReloadBackground.js");
+    
+    await fs.copyFile(backgroundScriptPath, destPath);
 }
 
 module.exports = createTempExtension;

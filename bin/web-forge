@@ -8,11 +8,12 @@ const { exec } = require('child_process');
 class Webforge {
     async run(browser, path, args) {
         const filterValues = ValidateValues(browser, path);
+        path = filterValues.path;
         if (filterValues.result) {
             try {
                 const tempDirPath = await createTempExtension(path);
                 createServer(filterValues.path);
-                filterValues.launchArgs = filterValues.launchArgs + ` --user-data-dir=${pathLib.join(tempDirPath, 'userFolder')} --load-extension=${tempDirPath} ${args}`;
+                filterValues.launchArgs = filterValues.launchArgs + ` --user-data-dir=${pathLib.join(tempDirPath, 'userFolder')} --load-extension=${pathLib.join(tempDirPath, 'extension')} ${args}`;
 
                 exec(filterValues.launchArgs, (error, stdout, stderr) => {
                     if (error) {

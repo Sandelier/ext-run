@@ -14,6 +14,7 @@ function createServer(folderWatch) {
         socket.on('message', (message) => {
             console.log(`Received: ${message}`);
         });
+
         
         socket.send('Hello, client!');
     });
@@ -23,6 +24,12 @@ function createServer(folderWatch) {
             client.send(JSON.stringify(message));
         });
     }
+
+    server.on('close', (reasonCode, description) => {
+        if (clients.size() < 1) {
+            
+        }
+    });
     
     let debounceTimer;
     fs.watch(folderWatch, (eventType, filename) => {
