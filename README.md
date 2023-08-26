@@ -18,3 +18,6 @@ Web-forge is an npm command-line library designed to facilitate the easy buildin
   - The 'path' parameter is not necessary; you can leave it as an empty string, and the code will assume that the directory in your terminal is the extension directory.
   - The "optional arguments" field accommodates default arguments related to the chosen browser. For instance, when working with Chrome, you can include arguments like "--incognito."
 - Building
+
+
+Oisko parempi nimi joku Chromium-forge tai Chromium-ext

@@ -1,84 +1,77 @@
 #!/usr/bin/env node
 
 const createTempExtension = require('./handleExtensionFolder.js');
-const createServer = require('./server.js');
+const { createServer, server, eventEmitter } = require('./server.js');
 const pathLib = require('path');
 const { exec } = require('child_process');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 
-class Webforge {
-    async run(browser, path, args) {
-        const filterValues = ValidateValues(browser, path);
-        path = filterValues.path;
-        if (filterValues.result) {
-            try {
-                const tempDirPath = await createTempExtension(path);
-                createServer(filterValues.path);
-                filterValues.launchArgs = filterValues.launchArgs + ` --user-data-dir=${pathLib.join(tempDirPath, 'userFolder')} --load-extension=${pathLib.join(tempDirPath, 'extension')} ${args}`;
 
-                exec(filterValues.launchArgs, (error, stdout, stderr) => {
-                    if (error) {
-                        console.error(`Error: ${error.message}`);
-                        return;
-                    }
-                    if (stderr) {
-                        console.error(`stderr: ${stderr}`);
-                        return;
-                    }
-                    console.log(`stdout: ${stdout}`);
-                });
-            } catch (error) {
-                console.log(error);
+const tempDirName = `temp_${uuidv4()}`;
+const tempDirPath = pathLib.join(__dirname, tempDirName);
+
+let browserProcess = null;
+
+async function Webforge(browser, path, args) {
+
+    const launchArgs = `start ${browser} --user-data-dir=${pathLib.join(tempDirPath, 'userFolder')} --load-extension=${pathLib.join(tempDirPath, 'extension')} --no-first-run ${args}`;
+    path = path || process.cwd()
+    try {
+        await createTempExtension(path, tempDirPath);
+        createServer(path);
+
+        eventEmitter.on('socketClosed', () => {
+            cleanUp(tempDirPath);
+        });
+
+        /*  Need to think of an better way to do this since i tried using spawn childprocess but didint work since the browsers arent always in environment variables.
+            And why this is bad because i cant detect when the browser closes so the program dosent have any idea when to close itself.
+            And same thing int he websocket that its not good to clsoe it immediately if client disconnects because 
+            what if the user just closes the extension and puts it back on since that causes an disconnect too. */
+            
+        browserProcess = exec(launchArgs, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error: ${error.message}`);
+                return;
             }
+            if (stderr) {
+                console.error(`stderr: ${stderr}`);
+                return;
+            }
+        });
 
-        } else {
-            console.error(filterValues.error);
-        }
+    } catch (error) {
+        console.log(error);
     }
 }
 
-
-function ValidateValues(browser, path) {
-    const filterValues = {
-        result: true,
-        error: 'Default',
-        launchArgs: ''
-    };
-
-    // Checks browser
-    switch (browser) {
-        case 'firefox':
-        case 'ff':
-
-            break;
-        case 'chrome':
-        case 'ch':
-            if (path != "" && path) {
-                filterValues.path = path;
-            } else {
-                filterValues.path = process.cwd();
-            }
-            filterValues.launchArgs = `start chrome`;
-            break;
-        case 'edge':
-        case 'msedge':
-
-            break;
-        case 'brave':
-        case 'br':
-
-            break;
-        default:
-            filterValues.result = false;
-            filterValues.error = `Browser was unknown. Either it was wrong syntax or unknown browser. ${browser}`;
-            return filterValues;
+async function cleanUp(tempDirPath) {
+    if (browserProcess) {
+        browserProcess.kill();
     }
+    server.close();
+    await removeTempDir(tempDirPath);
+    process.exit(0);
+}
 
-    return filterValues;
+async function removeTempDir(tempDirPath) {
+    // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
+    const pattern = new RegExp(/\\web-forge\\bin\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
+    if (pattern.test(tempDirPath) && fs.existsSync(tempDirPath)) {
+        try {
+            console.log("About to remove", tempDirPath);
+            //fs.rmSync(tempDirPath, { recursive: true});
+        } catch (error) {
+            console.error('Error deleting temp extension folder.', error);
+        }
+    } else {
+        console.log('Invalid temp extension folder path or folder does not exist.', tempDirPath);
+    }
 }
 
 function validateBrowser(browser) {
     const browserMappings = [
-        ['firefox', 'ff',],
         ['chrome', 'ch'],
         ['edge', 'msedge'],
         ['brave', 'br']
@@ -104,10 +97,10 @@ if (method !== undefined) {
 
         case "-r":
             if (validateBrowser(browser) !== false) {
-                const webforge = new Webforge();
-                webforge.run(browser, path, optionalArgs);
+                Webforge(browser, path, optionalArgs);
             } else {
                 console.error(`Unknown browser: ${browser}`);
+                process.exit(1);
             }
             break;
 

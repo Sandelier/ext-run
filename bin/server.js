@@ -1,34 +1,26 @@
 const WebSocket = require('ws');
 const fs = require('fs');
+const { EventEmitter } = require('events');
+const eventEmitter = new EventEmitter();
+
 
 // Server is used so that we can monitor files and then reload the extension.
 const server = new WebSocket.Server({ port: 46532 });
-const clients = new Set();
 
-// It should be that the websocket sends like an unique thing to the client so then you could have multiple connections.
 function createServer(folderWatch) {
     server.on('connection', (socket) => {
         console.log('Client connected');
-        clients.add(socket);
-        
+
         socket.on('message', (message) => {
             console.log(`Received: ${message}`);
         });
 
-        
         socket.send('Hello, client!');
-    });
 
-    function sendMessage(message) {
-        clients.forEach(client => {
-            client.send(JSON.stringify(message));
+        socket.on('close', (code, reason) => {
+            console.log('Client disconnected:', code, reason);
+            eventEmitter.emit('socketClosed');
         });
-    }
-
-    server.on('close', (reasonCode, description) => {
-        if (clients.size() < 1) {
-            
-        }
     });
     
     let debounceTimer;
@@ -42,4 +34,8 @@ function createServer(folderWatch) {
     });
 }
 
-module.exports = createServer;
+module.exports = {
+    createServer,
+    server,
+    eventEmitter
+};

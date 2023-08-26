@@ -1,11 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 
 // Gonna add error handling later.
-
-const tempDirName = `temp_${uuidv4()}`;
-const tempDirPath = path.join(__dirname, tempDirName);
 
 // Goes through the extension folder and copies them to the temp folder. If it finds an manifest.json it also modifies it and adds an background script next to it.
 async function copyDirectory(source, destination) {
@@ -29,7 +25,7 @@ async function copyDirectory(source, destination) {
     }
 }
 
-async function createTempExtension(ext) {
+async function createTempExtension(ext, tempDirPath) {
     let manifestLock = false;
     
     try {
@@ -51,7 +47,7 @@ async function createTempExtension(ext) {
                     if (!manifestLock) {
                         manifestLock = true;
                         await Promise.all([
-                            modifyManifest(extFilePath),
+                            modifyManifest(extFilePath, tempDirPath),
                             addBackgroundScript(tempPath)
                         ]);
                     }
@@ -60,8 +56,6 @@ async function createTempExtension(ext) {
                 }
             }
         }
-
-        return tempDirPath;
     } catch (error) {
         console.error('Error copying directory:', error);
     }
@@ -69,7 +63,7 @@ async function createTempExtension(ext) {
 
 // Modifies the manifest to include the background script.
 // Have to later on check the permissions needed for the background script.
-async function modifyManifest(extFilePath) {
+async function modifyManifest(extFilePath, tempDirPath) {
     const manifestContent = await fs.readFile(extFilePath, 'utf-8');
     const parsedManifest = JSON.parse(manifestContent);
 

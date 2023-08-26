@@ -102,3 +102,5 @@ Test/Chromium/contentScript.js
 Test/Chromium/main.js
 Test/Chromium/manifest.json
 Test/Chromium/icon/icon.png
+Test/Chromium.crx
+Test/Chromium.pem

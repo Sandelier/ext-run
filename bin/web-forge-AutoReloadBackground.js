@@ -12,46 +12,13 @@ function connectWebSocket() {
 
   socket.onmessage = function (event) {
     if (event.data == "reload") {
-      reloadExtension();
+      chrome.runtime.reload();
     }
   };
 
   socket.onclose = function (event) {
     console.log("WebSocket connection closed", event);
   };
-}
-
-
-// Uses try and catch to check what browser you are using.
-const browserType = detectBrowser();
-function detectBrowser() {
-  try {
-    if (typeof browser !== 'undefined') {
-      return 'Firefox';
-    }
-  } catch (error) {}
-
-  try {
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getBrowserInfo) {
-      return 'Chromium';
-    }
-  } catch (error) {}
-
-  return undefined;
-}
-
-
-function reloadExtension() {
-  switch (browserType) {
-    case 'Firefox':
-      browser.runtime.reload();
-      break;
-    case 'Chromium':
-      chrome.runtime.reload();
-      break;
-    default: 
-      console.log("Unsupported browser");
-  }
 }
 
 connectWebSocket();
