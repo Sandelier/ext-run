@@ -1,11 +1,34 @@
 #!/usr/bin/env node
+
 const createTempExtension = require('./handleExtensionFolder.js');
+const createServer = require('./server.js');
+const pathLib = require('path');
+const { exec } = require('child_process');
 
 class Webforge {
-    run(browser, path, args) {
-        const filterValues = ValidateValues(browser, path, args);
+    async run(browser, path, args) {
+        const filterValues = ValidateValues(browser, path);
         if (filterValues.result) {
-            createTempExtension(path);
+            try {
+                const tempDirPath = await createTempExtension(path);
+                createServer(filterValues.path);
+                filterValues.launchArgs = filterValues.launchArgs + ` --user-data-dir=${pathLib.join(tempDirPath, 'userFolder')} --load-extension=${tempDirPath} ${args}`;
+
+                exec(filterValues.launchArgs, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`Error: ${error.message}`);
+                        return;
+                    }
+                    if (stderr) {
+                        console.error(`stderr: ${stderr}`);
+                        return;
+                    }
+                    console.log(`stdout: ${stdout}`);
+                });
+            } catch (error) {
+                console.log(error);
+            }
+
         } else {
             console.error(filterValues.error);
         }
@@ -13,7 +36,7 @@ class Webforge {
 }
 
 
-function ValidateValues(browser, path, args = "") {
+function ValidateValues(browser, path) {
     const filterValues = {
         result: true,
         error: 'Default',
@@ -28,7 +51,12 @@ function ValidateValues(browser, path, args = "") {
             break;
         case 'chrome':
         case 'ch':
-            filterValues.launchArgs = `start chrome --user-data-dir=${cleanUserDir} --load-extension=${tempExtLocation} ${args}`;
+            if (path != "" && path) {
+                filterValues.path = path;
+            } else {
+                filterValues.path = process.cwd();
+            }
+            filterValues.launchArgs = `start chrome`;
             break;
         case 'edge':
         case 'msedge':

@@ -8,10 +8,33 @@ const tempDirName = `temp_${uuidv4()}`;
 const tempDirPath = path.join(__dirname, tempDirName);
 
 // Goes through the extension folder and copies them to the temp folder. If it finds an manifest.json it also modifies it and adds an background script next to it.
+async function copyDirectory(source, destination) {
+    try {
+        await fs.mkdir(destination);
+        const files = await fs.readdir(source);
+        
+        for (const file of files) {
+            const sourcePath = path.join(source, file);
+            const destPath = path.join(destination, file);
+            
+            const stats = await fs.stat(sourcePath);
+            if (stats.isDirectory()) {
+                await copyDirectory(sourcePath, destPath);
+            } else {
+                await fs.copyFile(sourcePath, destPath);
+            }
+        }
+    } catch (error) {
+        console.error('Error copying directory:', error);
+    }
+}
+
 async function createTempExtension(ext) {
     let manifestLock = false;
+    
     try {
         await fs.mkdir(tempDirPath);
+        await fs.mkdir(path.join(tempDirPath, 'userFolder'));
         const files = await fs.readdir(ext);
         
         for (const file of files) {
@@ -59,9 +82,8 @@ async function modifyManifest(extFilePath) {
 }
 
 async function addBackgroundScript(extFilePath) {
-    const dir = path.join(extFilePath, '..');
     const backgroundScriptPath = path.join(__dirname, "web-forge-AutoReloadBackground.js");
-    await fs.copyFile(backgroundScriptPath, dir);
+    await fs.copyFile(backgroundScriptPath, path.join(extFilePath, "web-forge-AutoReloadBackground.js"));
 }
 
 module.exports = createTempExtension;
