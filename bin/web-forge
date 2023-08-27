@@ -6,6 +6,7 @@ const pathLib = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const { error } = require('console');
 
 
 const tempDirName = `temp_${uuidv4()}`;
@@ -55,20 +56,38 @@ async function cleanUp(tempDirPath) {
     process.exit(0);
 }
 
+// Have to have because the browser might be using userfolder for couple seconds still after shutting down which would cause permission issues.
+async function waitForUnlockAndDelete(filePath) {
+    let attempts = 0;
+    let ErrorMessage = "";
+    let interval = 1000
+    while (attempts < 10) {
+        try {
+            fs.rmSync(filePath, { recursive: true });
+            return;
+        } catch (deleteError) {
+            ErrorMessage = `Error deleting ${filePath}:`, deleteError;
+        }
+        await new Promise(resolve => setTimeout(resolve, interval));
+    }
+    
+    console.error(`Temp folder in ${filePath} could not be deleted after ${maxAttempts} attempts.`);
+    console.error(ErrorMessage);
+    return;
+}
+
 async function removeTempDir(tempDirPath) {
     // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
     const pattern = new RegExp(/\\web-forge\\bin\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
+    
     if (pattern.test(tempDirPath) && fs.existsSync(tempDirPath)) {
-        try {
-            console.log("About to remove", tempDirPath);
-            //fs.rmSync(tempDirPath, { recursive: true});
-        } catch (error) {
-            console.error('Error deleting temp extension folder.', error);
-        }
+        await waitForUnlockAndDelete(tempDirPath);
+        console.log("done");
     } else {
         console.log('Invalid temp extension folder path or folder does not exist.', tempDirPath);
     }
 }
+
 
 function validateBrowser(browser) {
     const browserMappings = [
