@@ -6,6 +6,7 @@ const pathLib = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const { spawn } = require('child_process');
+const { program } = require('commander');
 
 const tempDirName = `temp_${uuidv4()}`;
 const tempDirPath = pathLib.join(__dirname, tempDirName);
@@ -20,11 +21,12 @@ async function Webforge(browser, path, args) {
             await createTempExtension(path, tempDirPath);
             createServer(path, tempDirPath);
 
+            console.log(args);
             const launchOptions = [
                 `--user-data-dir=${pathLib.join(tempDirPath, 'userFolder')}`,
                 `--load-extension=${pathLib.join(tempDirPath, 'extension')}`,
                 '--no-first-run',
-                ...args
+                ...(args ? args.split(" ") : [])
             ];
 
             browserProcess = spawn(browserPath, launchOptions);
@@ -70,11 +72,15 @@ async function cleanUp(tempDirPath) {
 }
 
 process.on('SIGINT', async () => {
-    try {
-      await cleanUp(tempDirPath);
-    } catch (error) {
-      console.error('Error during cleanup:', error);
-      process.exit(1);
+    if (programLock) {
+        try {
+            await cleanUp(tempDirPath);
+          } catch (error) {
+            console.error('Error during cleanup:', error);
+            process.exit(1);
+          }
+    } else {
+        process.exit(0);
     }
   });
 
@@ -91,7 +97,7 @@ async function removeTempDir(tempDirPath) {
                 fs.rmSync(tempDirPath, { recursive: true });
                 break;
             } catch (deleteError) {
-                console.error(`Error deleting ${tempDirPath}: ${deleteError}`);
+                //console.error(`Error deleting ${tempDirPath}: ${deleteError}`);
             }
             attempts++;
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -114,31 +120,48 @@ function validateBrowser(browser) {
         }
     }
 
+    console.error(`Received an unknown browser ${browser}`);
     return false;
 }
 
 
-const [, , method, browser , path, ...optionalArgs] = process.argv;
+let programLock = false;
 
-if (method !== undefined) {
-    switch (method) {
-        case "-b":
-            // In the workings
-            break;
+// Maybe make it just so browser can be string too and maybe split it at , so like "chrome, edge" and it opens up chrome and edge. If you do this then just remove -a
+program
+  .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br')
+  .option('-a, --all-browsers', 'Launches all browsers. cant be used together with -b')
+  .option('-p, --path <path>', 'Path to extension. Defaults to current folder if no path is given.')
+  .option('-args, --arguments <args>', 'Extra arguments as a string')
+  .option('-help, --help', 'Shows available arguments.')
+  .parse(process.argv);
 
-        case "-r":
-            if (validateBrowser(browser) !== false) {
-                Webforge(browser, path, optionalArgs);
-            } else {
-                console.error(`Unknown browser: ${browser}`);
-                process.exit(1);
-            }
-            break;
 
-        default:
-            console.error(`Unknown method: ${method}`);
-            break;
-    }
+if (program.opts().browser && program.allBrowsers) {
+  console.error('Cannot use both -b and -a options at the same time.');
+  process.exit(1);
+}
+
+if (program.opts().help) {
+    console.log('')
+    console.log('Web-forge');
+    console.log('   -b <browser>', '| Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br')
+    console.log('   -a', '          | Launches all browsers. cant be used together with -b')
+    console.log('   -p <path>', '   | Path to extension. Defaults to current folder if no path is given.')
+    console.log('   -args <args>', '| Extra arguments as a string')
+    console.log('   -help', '       | Shows available arguments.')
+    console.log('');
+    console.log('Examples:');
+    console.log('   web-forge -b chrome -args "--kiosk"');
+    console.log('   web-forge -b edge -p "path/to/extension"');
+    console.log('');
+    process.exit(0);
 } else {
-    console.log('Usage: web-forge <-b|-r> <path> <optional arguments>');
+    if (validateBrowser(program.opts().browser) !== false) {
+        programLock = true;
+        Webforge(program.opts().browser, program.opts().path, program.opts().arguments);
+    } else {
+        console.log('Invalid browser. Exiting...');
+        process.exit(0);
+    }
 }

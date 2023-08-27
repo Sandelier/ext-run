@@ -101,3 +101,17 @@ Test/Chromium/contentScript.js
 Test/Chromium/main.js
 Test/Chromium/manifest.json
 Test/Chromium/icon/icon.png
+node_modules/commander/esm.mjs
+node_modules/commander/index.js
+node_modules/commander/LICENSE
+node_modules/commander/package-support.json
+node_modules/commander/package.json
+node_modules/commander/Readme.md
+node_modules/commander/lib/argument.js
+node_modules/commander/lib/command.js
+node_modules/commander/lib/error.js
+node_modules/commander/lib/help.js
+node_modules/commander/lib/option.js
+node_modules/commander/lib/suggestSimilar.js
+node_modules/commander/typings/esm.d.mts
+node_modules/commander/typings/index.d.ts

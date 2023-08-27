@@ -20,24 +20,26 @@ function createServer(folderWatch, tempDirPath) {
     }
 
     let debounceTimer_Update;
-    function updateTempExtension(filePath) {
+    function updateTempExtension(filePath, type) {
         const fileModified = path.relative(folderWatch, filePath);
         const tempFile_Relative_To_FileModified = path.join(tempDirPath, 'extension', fileModified);
-    
-        // If the directory dosent exist.
-        const destinationDir = path.dirname(tempFile_Relative_To_FileModified);
-        if (!fs.existsSync(destinationDir)) {
-            fs.mkdirSync(destinationDir, { recursive: true });
-        }
-    
-        fs.copyFile(filePath, tempFile_Relative_To_FileModified, (err) => {
-            if (err) {
-                console.error('Error copying file:', err);
-            } else {
-                console.log('File copied successfully!');
+        if (type === "copy") {
+            // If the directory dosent exist.
+            const destinationDir = path.dirname(tempFile_Relative_To_FileModified);
+            if (!fs.existsSync(destinationDir)) {
+                fs.mkdirSync(destinationDir, { recursive: true });
             }
-        });
-
+        
+            fs.copyFile(filePath, tempFile_Relative_To_FileModified, (err) => {
+                if (err) {
+                    console.error('Error copying file:', err);
+                } else {
+                    console.log('File copied successfully!');
+                }
+            });
+        } else if (type === "delete") {
+            fs.rmSync(tempFile_Relative_To_FileModified, { recursive: true });
+        }
         clearTimeout(debounceTimer_Update);
         debounceTimer_Update = setTimeout(() => {
             sendMessage("WebForge-ReloadExtension");
@@ -62,46 +64,32 @@ function createServer(folderWatch, tempDirPath) {
         }
     }
 
-    let isFirstEvent = true;
-    let debounceTimer_Watch;
-
+    // Watches the extension folder and modifies temporary folder based on extension folder.
     fs.watch(folderWatch, { recursive: true }, (eventType, filename) => {
-        // First event is for subdirectorys because fs.watch triggers multiple event changes one for subdirectory and one for the parent directory.
-        if (isFirstEvent) {
-            // debounceTimer_Watch used because multiple events triggered per change.
-            clearTimeout(debounceTimer_Watch);
-            debounceTimer_Watch = setTimeout(() => {
-                isFirstEvent = true; 
-            }, 100);
-
-            const filePath = path.join(folderWatch, filename);
-            console.log(filePath);
-            console.log(eventType);
-            if (eventType === 'change') {
-                handleFileChange(filePath);
-            } else if (eventType === 'rename') {
-                if (!fs.existsSync(filePath)) {
-                    console.log("File or folder removed:", filePath);
+        const filePath = path.join(folderWatch, filename);
+        if (eventType === 'change') {
+            handleFileChange(filePath);
+        } else if (eventType === 'rename') {
+            if (!fs.existsSync(filePath)) {
+                console.log("File or folder removed:", filePath);
+                deleteChecksumsRecursively(filePath);
+            } else {
+                const stats = fs.statSync(filePath);
+                if (stats.isFile()) {
+                    handleFileChange(filePath);
+                } else if (stats.isDirectory()) {
+                    console.log("Folder added or renamed:", filePath);
                     deleteChecksumsRecursively(filePath);
-                } else {
-                    const stats = fs.statSync(filePath);
-                    if (stats.isFile()) {
-                        handleFileChange(filePath);
-                    } else if (stats.isDirectory()) {
-                        console.log("Folder added or renamed:", filePath);
-                        deleteChecksumsRecursively(filePath);
-                    }
                 }
             }
-            isFirstEvent = false;
         }
     });
 
     function handleFileChange(filePath) {
         const currentChecksum = calculateFileChecksum(filePath);
 
-        if (previousChecksums[filePath] && previousChecksums[filePath] !== currentChecksum) {
-            updateTempExtension(filePath);
+        if (previousChecksums[filePath] !== currentChecksum) {
+            updateTempExtension(filePath, "copy");
         }
 
         previousChecksums[filePath] = currentChecksum;
@@ -119,6 +107,7 @@ function createServer(folderWatch, tempDirPath) {
                 delete previousChecksums[key];
             }
         }
+        updateTempExtension(directory, "delete");
     }
 }
 
