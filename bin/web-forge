@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 
 const createTempExtension = require('./handleExtensionFolder.js');
-const { createServer, server, eventEmitter } = require('./server.js');
+const { createServer, server } = require('./server.js');
 const pathLib = require('path');
-const { exec } = require('child_process');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
-const { error } = require('console');
-
+const { spawn } = require('child_process');
 
 const tempDirName = `temp_${uuidv4()}`;
 const tempDirPath = pathLib.join(__dirname, tempDirName);
@@ -15,36 +13,51 @@ const tempDirPath = pathLib.join(__dirname, tempDirName);
 let browserProcess = null;
 
 async function Webforge(browser, path, args) {
+    const browserPath = getBrowserPath(browser);
+    if (browserPath != null) {
+        path = path || process.cwd()
+        try {
+            await createTempExtension(path, tempDirPath);
+            createServer(path, tempDirPath);
 
-    const launchArgs = `start ${browser} --user-data-dir=${pathLib.join(tempDirPath, 'userFolder')} --load-extension=${pathLib.join(tempDirPath, 'extension')} --no-first-run ${args}`;
-    path = path || process.cwd()
-    try {
-        await createTempExtension(path, tempDirPath);
-        createServer(path);
+            const launchOptions = [
+                `--user-data-dir=${pathLib.join(tempDirPath, 'userFolder')}`,
+                `--load-extension=${pathLib.join(tempDirPath, 'extension')}`,
+                '--no-first-run',
+                ...args
+            ];
 
-        eventEmitter.on('socketClosed', () => {
-            cleanUp(tempDirPath);
-        });
+            browserProcess = spawn(browserPath, launchOptions);
 
-        /*  Need to think of an better way to do this since i tried using spawn childprocess but didint work since the browsers arent always in environment variables.
-            And why this is bad because i cant detect when the browser closes so the program dosent have any idea when to close itself.
-            And same thing int he websocket that its not good to clsoe it immediately if client disconnects because 
-            what if the user just closes the extension and puts it back on since that causes an disconnect too. */
-            
-        browserProcess = exec(launchArgs, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error: ${error.message}`);
-                return;
-            }
-            if (stderr) {
-                console.error(`stderr: ${stderr}`);
-                return;
-            }
-        });
+            browserProcess.on('close', (code) => {
+              cleanUp(tempDirPath);
+            });
 
-    } catch (error) {
-        console.log(error);
+        } catch (error) {
+            console.log(error);
+        }
+    } else {
+        console.error(`Was unable to find any valid browser paths for ${browser}`);
     }
+}
+
+// Returns an default path for browsers
+function getBrowserPath(browser) {
+    const browserDefaultPathMap = {
+      "chrome": ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"],
+      "msedge": ["C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
+      "brave": ["C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"]
+    };
+
+    const paths = browserDefaultPathMap[browser.toLowerCase()] || [];
+
+    for (const path of paths) {
+        if (fs.existsSync(path)) {
+            return path;
+        }
+    }
+
+    return null;
 }
 
 async function cleanUp(tempDirPath) {
@@ -56,38 +69,37 @@ async function cleanUp(tempDirPath) {
     process.exit(0);
 }
 
-// Have to have because the browser might be using userfolder for couple seconds still after shutting down which would cause permission issues.
-async function waitForUnlockAndDelete(filePath) {
-    let attempts = 0;
-    let ErrorMessage = "";
-    let interval = 1000
-    while (attempts < 10) {
-        try {
-            fs.rmSync(filePath, { recursive: true });
-            return;
-        } catch (deleteError) {
-            ErrorMessage = `Error deleting ${filePath}:`, deleteError;
-        }
-        await new Promise(resolve => setTimeout(resolve, interval));
+process.on('SIGINT', async () => {
+    try {
+      await cleanUp(tempDirPath);
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+      process.exit(1);
     }
-    
-    console.error(`Temp folder in ${filePath} could not be deleted after ${maxAttempts} attempts.`);
-    console.error(ErrorMessage);
-    return;
-}
+  });
+
 
 async function removeTempDir(tempDirPath) {
-    // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
+        // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
     const pattern = new RegExp(/\\web-forge\\bin\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
     
     if (pattern.test(tempDirPath) && fs.existsSync(tempDirPath)) {
-        await waitForUnlockAndDelete(tempDirPath);
-        console.log("done");
+        // Have to have because the browser might be using userfolder for couple seconds still after shutting down which would cause permission issues.
+        let attempts = 0;
+        while (attempts < 10) {
+            try {
+                fs.rmSync(tempDirPath, { recursive: true });
+                break;
+            } catch (deleteError) {
+                console.error(`Error deleting ${tempDirPath}: ${deleteError}`);
+            }
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
     } else {
         console.log('Invalid temp extension folder path or folder does not exist.', tempDirPath);
     }
 }
-
 
 function validateBrowser(browser) {
     const browserMappings = [

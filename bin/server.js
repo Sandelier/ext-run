@@ -1,28 +1,49 @@
 const WebSocket = require('ws');
 const fs = require('fs');
-const { EventEmitter } = require('events');
-const eventEmitter = new EventEmitter();
 const crypto = require('crypto');
+const path = require('path');
 
 
 // Server is used so that we can monitor files and then reload the extension.
 const server = new WebSocket.Server({ port: 46532 });
+const clients = new Set();
 
-function createServer(folderWatch) {
+function createServer(folderWatch, tempDirPath) {
     server.on('connection', (socket) => {
-        console.log('Client connected');
-
-        socket.on('message', (message) => {
-            console.log(`Received: ${message}`);
-        });
-
-        socket.send('Hello, client!');
-
-        socket.on('close', (code, reason) => {
-            console.log('Client disconnected:', code, reason);
-            eventEmitter.emit('socketClosed');
-        });
+        clients.add(socket);
     });
+
+    function sendMessage(actionMessage) {
+        for (const client in clients) {
+            client.send(JSON.stringify({ from: "WebForge", action: actionMessage}));
+        }
+    }
+
+    let debounceTimer_Update;
+    function updateTempExtension(filePath) {
+        const fileModified = path.relative(folderWatch, filePath);
+        const tempFile_Relative_To_FileModified = path.join(tempDirPath, 'extension', fileModified);
+    
+        // If the directory dosent exist.
+        const destinationDir = path.dirname(tempFile_Relative_To_FileModified);
+        if (!fs.existsSync(destinationDir)) {
+            fs.mkdirSync(destinationDir, { recursive: true });
+        }
+    
+        fs.copyFile(filePath, tempFile_Relative_To_FileModified, (err) => {
+            if (err) {
+                console.error('Error copying file:', err);
+            } else {
+                console.log('File copied successfully!');
+            }
+        });
+
+        clearTimeout(debounceTimer_Update);
+        debounceTimer_Update = setTimeout(() => {
+            sendMessage("WebForge-ReloadExtension");
+        }, 200);
+    }
+
 
     const previousChecksums = {};
 
@@ -42,18 +63,18 @@ function createServer(folderWatch) {
     }
 
     let isFirstEvent = true;
-    let debounceTimer;
+    let debounceTimer_Watch;
 
     fs.watch(folderWatch, { recursive: true }, (eventType, filename) => {
         // First event is for subdirectorys because fs.watch triggers multiple event changes one for subdirectory and one for the parent directory.
         if (isFirstEvent) {
-            // debouncetimer used because multiple events triggered per change.
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
+            // debounceTimer_Watch used because multiple events triggered per change.
+            clearTimeout(debounceTimer_Watch);
+            debounceTimer_Watch = setTimeout(() => {
                 isFirstEvent = true; 
             }, 100);
 
-            const filePath = `${folderWatch}/${filename}`;
+            const filePath = path.join(folderWatch, filename);
             console.log(filePath);
             console.log(eventType);
             if (eventType === 'change') {
@@ -80,7 +101,7 @@ function createServer(folderWatch) {
         const currentChecksum = calculateFileChecksum(filePath);
 
         if (previousChecksums[filePath] && previousChecksums[filePath] !== currentChecksum) {
-            console.log("File contents changed:", filePath);
+            updateTempExtension(filePath);
         }
 
         previousChecksums[filePath] = currentChecksum;
@@ -103,6 +124,5 @@ function createServer(folderWatch) {
 
 module.exports = {
     createServer,
-    server,
-    eventEmitter
+    server
 };

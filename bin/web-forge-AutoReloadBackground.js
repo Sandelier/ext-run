@@ -8,17 +8,26 @@ let socket;
 
 // It should be that the websocket sends like an unique thing to the client so then you could have multiple connections.
 function connectWebSocket() {
-  socket = new WebSocket("ws://localhost:46532");
+    socket = new WebSocket("ws://localhost:46532");
 
-  socket.onmessage = function (event) {
-    if (event.data == "reload") {
-      chrome.runtime.reload();
-    }
-  };
+    socket.onmessage = function (event) {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.from === "WebForge") {
+          const action = message.action;
 
-  socket.onclose = function (event) {
-    console.log("WebSocket connection closed", event);
-  };
+          switch (action) {
+            case "WebForge-ReloadExtension":
+              chrome.runtime.reload();
+              break;
+          }
+        };
+      } catch (error) {}
+
+    socket.onclose = function (event) {
+      console.log("WebSocket connection closed", event);
+    };
+  }
 }
 
 connectWebSocket();
