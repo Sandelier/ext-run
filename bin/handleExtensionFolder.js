@@ -25,9 +25,8 @@ async function copyDirectory(source, destination) {
     }
 }
 
-async function createTempExtension(ext, tempDirPath) {
+async function createTempExtension(ext, tempDirPath, port) {
     let manifestLock = false;
-    
     try {
         await fs.mkdir(tempDirPath);
         await fs.mkdir(path.join(tempDirPath, 'userFolder'));
@@ -47,8 +46,8 @@ async function createTempExtension(ext, tempDirPath) {
                     if (!manifestLock) {
                         manifestLock = true;
                         await Promise.all([
-                            modifyManifest(extFilePath, tempDirPath),
-                            addBackgroundScript(tempPath)
+                            modifyManifest(extFilePath, tempDirPath, port),
+                            addBackgroundScript(tempPath, port)
                         ]);
                     }
                 } else {
@@ -62,44 +61,54 @@ async function createTempExtension(ext, tempDirPath) {
 }
 
 // Modifies the manifest to include the background script.
-// Have to later on check the permissions needed for the background script.
-async function modifyManifest(extFilePath, tempDirPath) {
+async function modifyManifest(extFilePath, tempDirPath, port) {
     const manifestContent = await fs.readFile(extFilePath, 'utf-8');
     const parsedManifest = JSON.parse(manifestContent);
 
-    parsedManifest.background = !parsedManifest.background ? {} : parsedManifest.background;
-    parsedManifest.background.scripts = !parsedManifest.background.scripts ? [] : parsedManifest.background.scripts;
-
+    parsedManifest.background = parsedManifest.background || {};
+    parsedManifest.background.scripts = parsedManifest.background.scripts || [];
     parsedManifest.background.scripts.push("web-forge-AutoReloadBackground.js");
 
-    if (parsedManifest.content_security_policy) {
-        const newSources = "http://localhost:46532 ws://localhost:46532";
-        parsedManifest.content_security_policy = parsedManifest.content_security_policy
-            .replace(
-                /object-src 'self'/,
-                match => `${match} ${newSources};`
-            );
+    const newConnections = `ws://localhost:${port}`;
 
-        parsedManifest.content_security_policy = parsedManifest.content_security_policy
-            .replace(
-                /connect-src 'self'/,
-                match => `${match} ${newSources};`
-            );
+    parsedManifest.content_security_policy = parsedManifest.content_security_policy || "";
+
+    const connectSrcRegex = /connect-src/;
+    // Making the manifest allow websocket server in the port.
+    if (!connectSrcRegex.test(parsedManifest.content_security_policy)) {
+        parsedManifest.content_security_policy += ` connect-src ${newConnections};`;
+    } else {
+        parsedManifest.content_security_policy = parsedManifest.content_security_policy.replace(
+            /connect-src(.*?)(?=(;|$))/,
+            `connect-src$1 ${newConnections}`
+        );
     }
-
-
 
     const modifiedManifestContent = JSON.stringify(parsedManifest, null, 2);
     const tempManifestPath = path.join(tempDirPath, 'extension', 'manifest.json');
     await fs.writeFile(tempManifestPath, modifiedManifestContent, 'utf-8');
 }
 
-async function addBackgroundScript(tempPathFile) {
+
+async function addBackgroundScript(tempPathFile, port) {
     const tempPathFolder = path.dirname(tempPathFile);
     const backgroundScriptPath = path.join(__dirname, "web-forge-AutoReloadBackground.js");
     const destPath = path.join(tempPathFolder, "web-forge-AutoReloadBackground.js");
-    
-    await fs.copyFile(backgroundScriptPath, destPath);
-}
+      
+    // Modifying the port on backgroundScript to use the current port.
+    try {
+      const data = await fs.readFile(backgroundScriptPath, 'utf8');
+  
+      const modifiedPort = data.replace(
+        /let socket = new WebSocket\("ws:\/\/localhost:\d+"\);/,
+        `let socket = new WebSocket("ws://localhost:${port}");`
+      );
+
+      await fs.writeFile(destPath, modifiedPort, 'utf8');
+    } catch (error) {
+      console.error('An error occurred:', error);
+    }
+  }
+  
 
 module.exports = createTempExtension;

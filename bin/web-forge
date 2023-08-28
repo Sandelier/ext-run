@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 const createTempExtension = require('./handleExtensionFolder.js');
-const { createServer, server } = require('./server.js');
+const { createServer } = require('./server.js');
 const pathLib = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const { spawn } = require('child_process');
 const { program } = require('commander');
+const WebSocket = require('ws');
 
 const tempDirName = `temp_${uuidv4()}`;
 const tempDirPath = pathLib.join(__dirname, tempDirName);
@@ -16,45 +17,77 @@ let browserProcesses = [];
 async function Webforge(browser, path, args) {
     path = path || process.cwd()
     try {
-        await createTempExtension(path, tempDirPath);
-        createServer(path, tempDirPath);
+        await checkPortsAndCreate();
+        if (server) {
+            console.log(`Listening on port ${serverPort.port}`)
+            await createTempExtension(path, tempDirPath, serverPort.port);
+            server = createServer(path, tempDirPath, server);
 
-        // Starts up browsers with arguments.
-        for (const browserName of browser) {
-            const browserPath = getBrowserPath(browserName);
-            if (browserPath) {
-                const launchOptions = [
-                    `--user-data-dir=${pathLib.join(tempDirPath, 'userFolder', browserName)}`,
-                    `--load-extension=${pathLib.join(tempDirPath, 'extension')}`,
-                    '--no-first-run',
-                    ...(args ? args.split(" ") : [])
-                ];
+            // Starts up browsers with arguments.
+            const browserPromises = browser.map(async (browserName) => {
+                const browserPath = getBrowserPath(browserName);
+                if (browserPath) {
+                    const launchOptions = [
+                        `--user-data-dir=${pathLib.join(tempDirPath, 'userFolder', browserName)}`,
+                        `--load-extension=${pathLib.join(tempDirPath, 'extension')}`,
+                        '--no-first-run',
+                        ...(args ? args.split(" ") : [])
+                    ];
 
-                const browserProcess = spawn(browserPath, launchOptions);
-                browserProcesses.push(browserProcess); 
+                    const browserProcess = spawn(browserPath, launchOptions);
+                    browserProcesses.push(browserProcess);
 
-                browserProcess.on('close', (code) => {
-                    browserProcesses = browserProcesses.filter(process => process !== browserProcess);
+                    return new Promise((resolve) => {
+                        browserProcess.on('close', (code) => {
+                            browserProcesses = browserProcesses.filter(
+                                (process) => process !== browserProcess
+                            );
 
-                    if (browserProcesses.length === 0) {
-                        cleanUp(tempDirPath);
-                    }
-                });
-            } else {
-                console.log(`Unable to find valid path for ${browserName}`);
-                if (browserProcesses.size == 0) {
-                    cleanUp(tempDirPath);
+                            if (browserProcesses.length === 0) {
+                                resolve();
+                            }
+                        });
+                    });
+                } else {
+                    console.log(`Unable to find a valid path for ${browserName}`);
                 }
-            }
+            });
+            // Waiting for all promises because if we dont use promises the finally block will be executed immediately because everything is asyncronous.
+            await Promise.all(browserPromises);
         }
-
     } catch (error) {
         console.log(error);
+    } finally {
+        await cleanUp(tempDirPath);
     }
 }
 
+// Loop to try to get available websocket.
+// I would have placed this in server.js but decided its best to place in here because handleExtensionFolder needs the port of the server.
+let server;
+const serverPort = { port: 46532 };
+
+async function checkPortsAndCreate() {
+    server = new WebSocket.Server({ port: serverPort.port });
+    
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        serverPort.port += 1;
+        if (serverPort.port < 46632) {
+            checkPortsAndCreate();
+        } else {
+          console.log(`All ports in the range are in use.`);
+        }
+      }
+    });
+}
+
+
 // Returns an default path for browsers
 function getBrowserPath(browser) {
+
+    // On this remember the map has to correspond to correct name that validateBrowser returns. 
+    // Because this fails in example if you switch up validateBrowser to return "edge" instead of "msedge"
     const browserDefaultPathMap = {
       "chrome": ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"],
       "msedge": ["C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
@@ -62,7 +95,6 @@ function getBrowserPath(browser) {
     };
 
     const paths = browserDefaultPathMap[browser.toLowerCase()] || [];
-
     for (const path of paths) {
         if (fs.existsSync(path)) {
             return path;
@@ -76,7 +108,9 @@ async function cleanUp(tempDirPath) {
     for (const browser of browserProcesses) {
         browser.kill();
     }
-    server.close();
+    if (server) {
+        server.close();
+    }
     await removeTempDir(tempDirPath);
     process.exit(0);
 }
@@ -121,12 +155,11 @@ async function removeTempDir(tempDirPath) {
 function validateBrowser(browser) {
     const browserMappings = [
         ['chrome', 'ch'],
-        ['edge', 'msedge'],
+        ['msedge', 'edge'],
         ['brave', 'br']
     ];
 
     const uniqueBrowsers = new Set();
-
     const browserNames = browser.split(',');
 
     for (const inputBrowser of browserNames) {
@@ -152,8 +185,6 @@ function validateBrowser(browser) {
 }
 
 
-let programLock = false;
-
 program
   .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br. You can also put browsers into string to launch multiple -b "chrome,edge".')
   .option('-p, --path <path>', 'Path to extension. Defaults to current folder if no path is given.')
@@ -161,26 +192,39 @@ program
   .option('-help, --help', 'Shows available arguments.')
   .parse(process.argv);
 
-
-if (program.opts().help) {
+program.on('--help', () => {
     console.log('')
-    console.log('Web-forge');
-    console.log('   -b <browser>', '| Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br You can also put browsers into string to launch multiple -b "chrome,edge".')
-    console.log('   -p <path>', '   | Path to extension. Defaults to current folder if no path is given.')
-    console.log('   -args <args>', '| Extra arguments as a string')
-    console.log('   -help', '       | Shows available arguments.')
-    console.log('');
     console.log('Examples:');
     console.log('   web-forge -b chrome -args "--kiosk"');
     console.log('   web-forge -b edge -p "path/to/extension"');
     console.log('');
     process.exit(0);
-} else {
-    const validBrowser = validateBrowser(program.opts().browser);
-    if (validBrowser !== false) {
-        programLock = true;
-        Webforge(validBrowser, program.opts().path, program.opts().arguments);
-    } else {
-        process.exit(0);
-    }
+});
+
+program.parse(process.argv);
+
+if (program.opts().help) {
+  program.outputHelp();
+  process.exit(0);
 }
+
+if (!program.opts().browser) {
+  console.log('')
+  console.error('Error: Please provide the -b option with a valid browser.');
+  console.log('')
+  program.outputHelp();
+  process.exit(1);
+}
+
+const validBrowser = validateBrowser(program.opts().browser);
+
+if (!validBrowser) {
+  console.log('')
+  console.error('Error: Invalid browser specified.');
+  console.log('')
+  program.outputHelp();
+  process.exit(1);
+}
+
+programLock = true;
+Webforge(validBrowser, program.opts().path, program.opts().arguments);

@@ -1,4 +1,4 @@
-const WebSocket = require('ws');
+
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
@@ -6,27 +6,15 @@ const path = require('path');
 
 // Server is used so that we can monitor files and then reload the extension.
 
-// Loop to try to get available websocket.
-let initialPort = 46532;
-let server;
-while (initialPort < 46632) {
-  try {
-     server = new WebSocket.Server({ port: initialPort )};
-     break;
-  } catch (error) 
-    initialPort += 1;
-  }
-}
-
 const clients = new Set();
 
-function createServer(folderWatch, tempDirPath) {
+function createServer(folderWatch, tempDirPath, server) {
     server.on('connection', (socket) => {
         clients.add(socket);
     });
 
     function sendMessage(actionMessage) {
-        for (const client in clients) {
+        for (const client of clients) {
             client.send(JSON.stringify({ from: "WebForge", action: actionMessage}));
         }
     }
@@ -52,6 +40,7 @@ function createServer(folderWatch, tempDirPath) {
         } else if (type === "delete") {
             fs.rmSync(tempFile_Relative_To_FileModified, { recursive: true });
         }
+
         clearTimeout(debounceTimer_Update);
         debounceTimer_Update = setTimeout(() => {
             sendMessage("WebForge-ReloadExtension");
@@ -121,9 +110,10 @@ function createServer(folderWatch, tempDirPath) {
         }
         updateTempExtension(directory, "delete");
     }
+
+    return server;
 }
 
 module.exports = {
-    createServer,
-    server
+    createServer
 };

@@ -37,8 +37,9 @@ Web-forge is using Mit license.
 
 ### Librarys
 Web-forge uses the following librarys:
-- Commander. Used to create commands easily.
-- UUID. Used to generate an unique temporary folder.
+- [Commander](https://www.npmjs.com/package/commander). Used to create commands easily.
+- [uuid](https://www.npmjs.com/package/uuid). Used to generate an unique temporary folder.
+- [ws](https://www.npmjs.com/package/ws). Used to create websockets.
 
 ### Plans
 Current plans are:
