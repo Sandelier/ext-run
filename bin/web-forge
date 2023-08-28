@@ -154,7 +154,6 @@ function validateBrowser(browser) {
 
 let programLock = false;
 
-// Maybe make it just so browser can be string too and maybe split it at , so like "chrome, edge" and it opens up chrome and edge. If you do this then just remove -a
 program
   .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br. You can also put browsers into string to launch multiple -b "chrome,edge".')
   .option('-p, --path <path>', 'Path to extension. Defaults to current folder if no path is given.')
