@@ -11,35 +11,45 @@ const { program } = require('commander');
 const tempDirName = `temp_${uuidv4()}`;
 const tempDirPath = pathLib.join(__dirname, tempDirName);
 
-let browserProcess = null;
+let browserProcesses = [];
 
 async function Webforge(browser, path, args) {
-    const browserPath = getBrowserPath(browser);
-    if (browserPath != null) {
-        path = path || process.cwd()
-        try {
-            await createTempExtension(path, tempDirPath);
-            createServer(path, tempDirPath);
+    path = path || process.cwd()
+    try {
+        await createTempExtension(path, tempDirPath);
+        createServer(path, tempDirPath);
 
-            console.log(args);
-            const launchOptions = [
-                `--user-data-dir=${pathLib.join(tempDirPath, 'userFolder')}`,
-                `--load-extension=${pathLib.join(tempDirPath, 'extension')}`,
-                '--no-first-run',
-                ...(args ? args.split(" ") : [])
-            ];
+        // Starts up browsers with arguments.
+        for (const browserName of browser) {
+            const browserPath = getBrowserPath(browserName);
+            if (browserPath) {
+                const launchOptions = [
+                    `--user-data-dir=${pathLib.join(tempDirPath, 'userFolder', browserName)}`,
+                    `--load-extension=${pathLib.join(tempDirPath, 'extension')}`,
+                    '--no-first-run',
+                    ...(args ? args.split(" ") : [])
+                ];
 
-            browserProcess = spawn(browserPath, launchOptions);
+                const browserProcess = spawn(browserPath, launchOptions);
+                browserProcesses.push(browserProcess); 
 
-            browserProcess.on('close', (code) => {
-              cleanUp(tempDirPath);
-            });
+                browserProcess.on('close', (code) => {
+                    browserProcesses = browserProcesses.filter(process => process !== browserProcess);
 
-        } catch (error) {
-            console.log(error);
+                    if (browserProcesses.length === 0) {
+                        cleanUp(tempDirPath);
+                    }
+                });
+            } else {
+                console.log(`Unable to find valid path for ${browserName}`);
+                if (browserProcesses.size == 0) {
+                    cleanUp(tempDirPath);
+                }
+            }
         }
-    } else {
-        console.error(`Was unable to find any valid browser paths for ${browser}`);
+
+    } catch (error) {
+        console.log(error);
     }
 }
 
@@ -63,8 +73,8 @@ function getBrowserPath(browser) {
 }
 
 async function cleanUp(tempDirPath) {
-    if (browserProcess) {
-        browserProcess.kill();
+    for (const browser of browserProcesses) {
+        browser.kill();
     }
     server.close();
     await removeTempDir(tempDirPath);
@@ -107,6 +117,7 @@ async function removeTempDir(tempDirPath) {
     }
 }
 
+// Returns valid browsers based on browser input and browsermapping.
 function validateBrowser(browser) {
     const browserMappings = [
         ['chrome', 'ch'],
@@ -114,14 +125,30 @@ function validateBrowser(browser) {
         ['brave', 'br']
     ];
 
-    for (const mapping of browserMappings) {
-        if (mapping.includes(browser)) {
-            return mapping[0];
+    const uniqueBrowsers = new Set();
+
+    const browserNames = browser.split(',');
+
+    for (const inputBrowser of browserNames) {
+        let foundMapping = false;
+        for (const mapping of browserMappings) {
+            if (mapping.includes(inputBrowser)) {
+                uniqueBrowsers.add(mapping[0]);
+                foundMapping = true;
+                break;
+            }
+        }
+        if (!foundMapping) {
+            console.error(`Received an unknown browser ${inputBrowser}`);
         }
     }
 
-    console.error(`Received an unknown browser ${browser}`);
-    return false;
+    if (uniqueBrowsers.size === 0) {
+        console.error('No valid browsers found. Exiting...');
+        return false;
+    }
+
+    return Array.from(uniqueBrowsers);
 }
 
 
@@ -129,24 +156,17 @@ let programLock = false;
 
 // Maybe make it just so browser can be string too and maybe split it at , so like "chrome, edge" and it opens up chrome and edge. If you do this then just remove -a
 program
-  .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br')
-  .option('-a, --all-browsers', 'Launches all browsers. cant be used together with -b')
+  .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br. You can also put browsers into string to launch multiple -b "chrome,edge".')
   .option('-p, --path <path>', 'Path to extension. Defaults to current folder if no path is given.')
   .option('-args, --arguments <args>', 'Extra arguments as a string')
   .option('-help, --help', 'Shows available arguments.')
   .parse(process.argv);
 
 
-if (program.opts().browser && program.allBrowsers) {
-  console.error('Cannot use both -b and -a options at the same time.');
-  process.exit(1);
-}
-
 if (program.opts().help) {
     console.log('')
     console.log('Web-forge');
-    console.log('   -b <browser>', '| Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br')
-    console.log('   -a', '          | Launches all browsers. cant be used together with -b')
+    console.log('   -b <browser>', '| Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br You can also put browsers into string to launch multiple -b "chrome,edge".')
     console.log('   -p <path>', '   | Path to extension. Defaults to current folder if no path is given.')
     console.log('   -args <args>', '| Extra arguments as a string')
     console.log('   -help', '       | Shows available arguments.')
@@ -157,11 +177,11 @@ if (program.opts().help) {
     console.log('');
     process.exit(0);
 } else {
-    if (validateBrowser(program.opts().browser) !== false) {
+    const validBrowser = validateBrowser(program.opts().browser);
+    if (validBrowser !== false) {
         programLock = true;
-        Webforge(program.opts().browser, program.opts().path, program.opts().arguments);
+        Webforge(validBrowser, program.opts().path, program.opts().arguments);
     } else {
-        console.log('Invalid browser. Exiting...');
         process.exit(0);
     }
 }
