@@ -20,17 +20,17 @@ When you run "web-forge -b <browser>" to launch an extension, the following step
 To use web-forge you need to have npm installed on your system.
 
 Once npm is installed, you can install web-forge globally using the following command
-````npm install -g web-forge``
+```npm install -g web-forge```
 
 ### Usage
 Here are couple examples of how to use web-forge
 
 - Launching chrome with custom arguments:
-  ````web-forge -b chrome -args "--kiosk"``
+  ```web-forge -b chrome -args "--kiosk"```
 - Launching Microsoft edge with a specific extension path:
   ```web-forge -b edge -p "path/to/extension"```
 - Launching both Chrome and Edge simultaneously:
-  ````web-forge -b "chrome,edge``
+  ```web-forge -b "chrome,edge```
 
 ### License
 Web-forge is using Mit license.
