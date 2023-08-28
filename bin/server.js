@@ -7,11 +7,12 @@ const path = require('path');
 // Server is used so that we can monitor files and then reload the extension.
 
 // Loop to try to get available websocket.
-const initialPort = 46532;
+let initialPort = 46532;
 let server;
 while (initialPort < 46632) {
   try {
      server = new WebSocket.Server({ port: initialPort )};
+     break;
   } catch (error) 
     initialPort += 1;
   }
