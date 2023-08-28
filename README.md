@@ -45,6 +45,5 @@ Current plans are:
   - Making better error handling because currently there is practically none.
   - Making the extension work with multiple browsers like firefox and other chromium based browsers. 
   - Making it that you can give it the browser exe location.
-  - Making that it wont close down if the weboscket is already on use instead it just trys an new websocket.
   - Testing
   - Then publishing it to npm.
