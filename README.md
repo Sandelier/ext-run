@@ -35,6 +35,11 @@ Here are couple examples of how to use web-forge
 ### License
 Web-forge is using Mit license.
 
+### Librarys
+Web-forge uses the following librarys:
+- Commander. Used to create commands easily.
+- UUID. Used to generate an unique temporary folder.
+
 ### Plans
 Current plans are:
   - Making better error handling because currently there is practically none.
