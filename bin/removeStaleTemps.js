@@ -1,5 +1,3 @@
-// Not yet tested.
-
 const psList = require('pd-list');
 const fs = require('fs').promises;
 const path = require('path');
@@ -12,7 +10,7 @@ async function removeStaleTempFolders(tempDirPath) {
                 file.IsDirectory() && 
                 !checkProcessId(file)) {
               fs.rmSync(tempDirPath, { recursive: true });
-              console.log(`Removed stale temp folder from ${tempDirPath}`);
+              console.log(`Removed temp folder from ${tempDirPath}`);
             }
         }
     } catch (errorr) {
@@ -33,3 +31,8 @@ async function checkProcessId(tempFolder) {
         return true;
     }
 }
+
+
+module.exports(
+  removeStaleTempFolders
+);
