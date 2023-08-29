@@ -112,11 +112,24 @@ function getBrowserPath(browser) {
     // On this remember the map has to correspond to correct name that validateBrowser returns. 
     // Because this fails in example if you switch up validateBrowser to return "edge" instead of "msedge"
     const browserDefaultPathMap = {
-        "chrome": ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"],
-        "msedge": ["C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
-        "brave": ["C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"]
+        "chrome": [
+            "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+            "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+            "/usr/bin/google-chrome",
+            "/usr/bin/chromium-browser"
+        ],
+        "msedge": [
+            "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+            "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+            "/usr/bin/microsoft-edge",
+            "/usr/bin/microsoft-edge-dev"
+        ],
+        "brave": [
+            "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+            "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+            "/usr/bin/brave-browser"
+        ]
     };
-
     const paths = browserDefaultPathMap[browser.toLowerCase()] || [];
     for (const path of paths) {
         if (fs.existsSync(path)) {
