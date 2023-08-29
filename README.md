@@ -46,5 +46,6 @@ Current plans are:
   - Making better error handling because currently there is practically none.
   - Making the extension work with multiple browsers like firefox and other chromium based browsers. 
   - Making it that you can give it the browser exe location.
+  - Need to organize and refactor the code.
   - Testing
   - Then publishing it to npm.
