@@ -2,7 +2,7 @@
 
 ### web-forge
 
-Web-forge is a command-line tool designed to launch multiple browsers with temporary extensions with automatic reloading. This tool is built to work with npm and is compatible with Chrome, Edge and Brave but there will be more browsers later on. Web-forge size is about 600kb but when you launh it the browser specific userfolder sizes are like 20mb+ each. Web-forge does handle the removing of temporary userfolders.
+Web-forge is a command-line tool designed to launch multiple browsers with temporary extensions with automatic reloading. This tool is built to work with npm and is compatible with Chrome, Edge and Brave but there will be more browsers later on. Web-forge size is ~600kb but when you launh it the browser specific userfolder sizes are like 20mb+ each. Web-forge does handle the removing of temporary userfolders.
 
 ### Features
 - Launches multiple browsers with specific extension

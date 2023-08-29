@@ -21,14 +21,18 @@ async function Webforge(browser, path, args) {
     path = path || process.cwd()
     try {
         await checkPortsAndCreate();
-        console.log(`Listening on port ${serverPort.port}`);
         if (server) {
             // Makes the temp/temp_uuid directory here.
             await fspr.mkdir(tempDirPath, {
                 recursive: true
             });
-            await createTempExtension(path, tempDirPath, serverPort.port);
-            server = createServer(path, tempDirPath, server);
+            const extensionSuccess = await createTempExtension(path, tempDirPath, serverPort.port);
+            if (extensionSuccess) {
+                createServer(path, tempDirPath, server);
+                console.log(`Listening on port ${serverPort.port}`);
+            } else {
+                server.close();
+            }
 
             const browserPids = [];
             // Starts up browsers with arguments.
@@ -37,10 +41,13 @@ async function Webforge(browser, path, args) {
                 if (browserPath) {
                     const launchOptions = [
                         `--user-data-dir=${pathLib.join(tempDirPath, 'userFolder', browserName)}`,
-                        `--load-extension=${pathLib.join(tempDirPath, 'extension')}`,
                         '--no-first-run',
                         ...(args ? args.split(" ") : [])
                     ];
+
+                    if (extensionSuccess) {
+                        launchOptions.push(`--load-extension=${pathLib.join(tempDirPath, 'extension')}`);
+                    }
 
                     const browserProcess = spawn(browserPath, launchOptions);
                     browserProcesses.push(browserProcess);

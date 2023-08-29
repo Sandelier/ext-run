@@ -26,13 +26,23 @@ async function copyDirectory(source, destination) {
 }
 
 async function createTempExtension(ext, tempDirPath, port) {
-    let manifestLock = false;
     try {
+
+        const manifestExists = await fs.access(path.join(ext, 'manifest.json'), fs.constants.F_OK)
+            .then(() => true)
+            .catch(() => false);
+
+        if (!manifestExists) {
+            console.log(`Did not find extension manifest in ${ext}`);
+            return false;
+        }
+
         await fs.mkdir(path.join(tempDirPath, 'userFolder'));
         await fs.mkdir(path.join(tempDirPath, 'extension'));
         const files = await fs.readdir(ext);
 
         const tempExtensionPath = path.join(tempDirPath, 'extension');
+        let manifestLock = false;
         for (const file of files) {
             const extFilePath = path.join(ext, file);
             const tempPath = path.join(tempExtensionPath, file);
@@ -54,8 +64,10 @@ async function createTempExtension(ext, tempDirPath, port) {
                 }
             }
         }
+        return true;
     } catch (error) {
         console.error('Error copying directory:', error);
+        return false;
     }
 }
 
