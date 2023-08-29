@@ -2,9 +2,7 @@ const psList = require('pd-list');
 const fs = require('fs').promises;
 const path = require('path');
 
-// NNot tested
-// Have to modify because pid is an array in the file so have to split by ,
-
+// Not tested
 async function removeStaleTempFolders(tempDirPath) {
     try {
         const files = fs.readdir(tempDirPath);
@@ -28,7 +26,15 @@ async function checkProcessId(tempFolder) {
         const processFile = fs.readFile(processFilePath, 'utf-8');
         const processes = await psList();
 
-        return processes.some(process => process.pid.toString() === processFile);
+        processIds = processFile.split(',');
+
+        processIds.forEach(processid => {
+            if (processes.some(process => process.pid.toString() === processid)) {
+            		return true;
+            }
+        });
+        
+        return false;
     } catch (error) {
         console.error(`Was unable to read temp folder process file at ${processFilePath}. ${error}`);
         return true;
