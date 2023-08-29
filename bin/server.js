@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
@@ -15,11 +14,15 @@ function createServer(folderWatch, tempDirPath, server) {
 
     function sendMessage(actionMessage) {
         for (const client of clients) {
-            client.send(JSON.stringify({ from: "WebForge", action: actionMessage}));
+            client.send(JSON.stringify({
+                from: "WebForge",
+                action: actionMessage
+            }));
         }
     }
 
     let debounceTimer_Update;
+
     function updateTempExtension(filePath, type) {
         const fileModified = path.relative(folderWatch, filePath);
         const tempFile_Relative_To_FileModified = path.join(tempDirPath, 'extension', fileModified);
@@ -27,9 +30,11 @@ function createServer(folderWatch, tempDirPath, server) {
             // If the directory dosent exist.
             const destinationDir = path.dirname(tempFile_Relative_To_FileModified);
             if (!fs.existsSync(destinationDir)) {
-                fs.mkdirSync(destinationDir, { recursive: true });
+                fs.mkdirSync(destinationDir, {
+                    recursive: true
+                });
             }
-        
+
             fs.copyFile(filePath, tempFile_Relative_To_FileModified, (err) => {
                 if (err) {
                     console.error('Error copying file:', err);
@@ -38,7 +43,9 @@ function createServer(folderWatch, tempDirPath, server) {
                 }
             });
         } else if (type === "delete") {
-            fs.rmSync(tempFile_Relative_To_FileModified, { recursive: true });
+            fs.rmSync(tempFile_Relative_To_FileModified, {
+                recursive: true
+            });
         }
 
         clearTimeout(debounceTimer_Update);

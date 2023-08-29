@@ -24,7 +24,9 @@ async function Webforge(browser, path, args) {
         console.log(`Listening on port ${serverPort.port}`);
         if (server) {
             // Makes the temp/temp_uuid directory here.
-            await fspr.mkdir(tempDirPath, { recursive: true });
+            await fspr.mkdir(tempDirPath, {
+                recursive: true
+            });
             await createTempExtension(path, tempDirPath, serverPort.port);
             server = createServer(path, tempDirPath, server);
 
@@ -75,20 +77,24 @@ async function Webforge(browser, path, args) {
 // Loop to try to get available websocket.
 // I would have placed this in server.js but decided its best to place in here because handleExtensionFolder needs the port of the server.
 let server;
-const serverPort = { port: 46532 };
+const serverPort = {
+    port: 46532
+};
 
 async function checkPortsAndCreate() {
-    server = new WebSocket.Server({ port: serverPort.port });
-    
+    server = new WebSocket.Server({
+        port: serverPort.port
+    });
+
     server.on('error', (error) => {
-      if (error.code === 'EADDRINUSE') {
-        serverPort.port += 1;
-        if (serverPort.port < 46632) {
-            checkPortsAndCreate();
-        } else {
-          console.log(`All ports in the range are in use.`);
+        if (error.code === 'EADDRINUSE') {
+            serverPort.port += 1;
+            if (serverPort.port < 46632) {
+                checkPortsAndCreate();
+            } else {
+                console.log(`All ports in the range are in use.`);
+            }
         }
-      }
     });
 }
 
@@ -99,9 +105,9 @@ function getBrowserPath(browser) {
     // On this remember the map has to correspond to correct name that validateBrowser returns. 
     // Because this fails in example if you switch up validateBrowser to return "edge" instead of "msedge"
     const browserDefaultPathMap = {
-      "chrome": ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"],
-      "msedge": ["C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
-      "brave": ["C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"]
+        "chrome": ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"],
+        "msedge": ["C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
+        "brave": ["C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"]
     };
 
     const paths = browserDefaultPathMap[browser.toLowerCase()] || [];
@@ -129,38 +135,14 @@ process.on('SIGINT', async () => {
     if (programLock) {
         try {
             await cleanUp();
-          } catch (error) {
+        } catch (error) {
             console.error('Error during cleanup:', error);
             process.exit(1);
-          }
+        }
     } else {
         process.exit(0);
     }
-  });
-
-
-
-//async function removeTempDir(tempDirPath) {
-//        // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
-//    const pattern = new RegExp(/\\web-forge\\temp\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
-//    
-//    if (pattern.test(tempDirPath) && fs.existsSync(tempDirPath)) {
-//        // Have to have because the browser might be using userfolder for couple seconds still after shutting down which would cause permission issues.
-//        let attempts = 0;
-//        while (attempts < 10) {
-//            try {
-//                fs.rmSync(tempDirPath, { recursive: true });
-//                break;
-//            } catch (deleteError) {
-//                //console.error(`Error deleting ${tempDirPath}: ${deleteError}`);
-//            }
-//            attempts++;
-//            await new Promise(resolve => setTimeout(resolve, 1000));
-//        }
-//    } else {
-//        console.log('Invalid temp extension folder path or folder does not exist.', tempDirPath);
-//    }
-//}
+});
 
 // Returns valid browsers based on browser input and browsermapping.
 function validateBrowser(browser) {
@@ -197,11 +179,11 @@ function validateBrowser(browser) {
 
 
 program
-  .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br. You can also put browsers into string to launch multiple -b "chrome,edge".')
-  .option('-p, --path <path>', 'Path to extension. Defaults to current folder if no path is given.')
-  .option('-args, --arguments <args>', 'Extra arguments as a string')
-  .option('-help, --help', 'Shows available arguments.')
-  .parse(process.argv);
+    .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br. You can also put browsers into string to launch multiple -b "chrome,edge".')
+    .option('-p, --path <path>', 'Path to extension. Defaults to current folder if no path is given.')
+    .option('-args, --arguments <args>', 'Extra arguments as a string')
+    .option('-help, --help', 'Shows available arguments.')
+    .parse(process.argv);
 
 program.on('--help', () => {
     console.log('')
@@ -215,26 +197,26 @@ program.on('--help', () => {
 program.parse(process.argv);
 
 if (program.opts().help) {
-  program.outputHelp();
-  process.exit(0);
+    program.outputHelp();
+    process.exit(0);
 }
 
 if (!program.opts().browser) {
-  console.log('')
-  console.error('Error: Please provide the -b option with a valid browser.');
-  console.log('')
-  program.outputHelp();
-  process.exit(1);
+    console.log('')
+    console.error('Error: Please provide the -b option with a valid browser.');
+    console.log('')
+    program.outputHelp();
+    process.exit(1);
 }
 
 const validBrowser = validateBrowser(program.opts().browser);
 
 if (!validBrowser) {
-  console.log('')
-  console.error('Error: Invalid browser specified.');
-  console.log('')
-  program.outputHelp();
-  process.exit(1);
+    console.log('')
+    console.error('Error: Invalid browser specified.');
+    console.log('')
+    program.outputHelp();
+    process.exit(1);
 }
 
 programLock = true;

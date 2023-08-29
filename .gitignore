@@ -122,3 +122,10 @@ node_modules/ps-list/package.json
 node_modules/ps-list/readme.md
 node_modules/ps-list/vendor/fastlist-0.3.0-x64.exe
 node_modules/ps-list/vendor/fastlist-0.3.0-x86.exe
+node_modules/is-running/.npmignore
+node_modules/is-running/.travis.yml
+node_modules/is-running/index.js
+node_modules/is-running/package.json
+node_modules/is-running/README.md
+node_modules/is-running/test/dummyChild.js
+node_modules/is-running/test/running-test.js

@@ -8,11 +8,11 @@ async function copyDirectory(source, destination) {
     try {
         await fs.mkdir(destination);
         const files = await fs.readdir(source);
-        
+
         for (const file of files) {
             const sourcePath = path.join(source, file);
             const destPath = path.join(destination, file);
-            
+
             const stats = await fs.stat(sourcePath);
             if (stats.isDirectory()) {
                 await copyDirectory(sourcePath, destPath);
@@ -31,12 +31,12 @@ async function createTempExtension(ext, tempDirPath, port) {
         await fs.mkdir(path.join(tempDirPath, 'userFolder'));
         await fs.mkdir(path.join(tempDirPath, 'extension'));
         const files = await fs.readdir(ext);
-        
+
         const tempExtensionPath = path.join(tempDirPath, 'extension');
         for (const file of files) {
             const extFilePath = path.join(ext, file);
             const tempPath = path.join(tempExtensionPath, file);
-            
+
             const stats = await fs.stat(extFilePath);
             if (stats.isDirectory()) {
                 await copyDirectory(extFilePath, tempPath);
@@ -94,21 +94,21 @@ async function addBackgroundScript(tempPathFile, port) {
     const tempPathFolder = path.dirname(tempPathFile);
     const backgroundScriptPath = path.join(__dirname, "web-forge-AutoReloadBackground.js");
     const destPath = path.join(tempPathFolder, "web-forge-AutoReloadBackground.js");
-      
+
     // Modifying the port on backgroundScript to use the current port.
     try {
-      const data = await fs.readFile(backgroundScriptPath, 'utf8');
-  
-      const modifiedPort = data.replace(
-        /let socket = new WebSocket\("ws:\/\/localhost:\d+"\);/,
-        `let socket = new WebSocket("ws://localhost:${port}");`
-      );
+        const data = await fs.readFile(backgroundScriptPath, 'utf8');
 
-      await fs.writeFile(destPath, modifiedPort, 'utf8');
+        const modifiedPort = data.replace(
+            /let socket = new WebSocket\("ws:\/\/localhost:\d+"\);/,
+            `let socket = new WebSocket("ws://localhost:${port}");`
+        );
+
+        await fs.writeFile(destPath, modifiedPort, 'utf8');
     } catch (error) {
-      console.error('An error occurred:', error);
+        console.error('An error occurred:', error);
     }
-  }
-  
+}
+
 
 module.exports = createTempExtension;
