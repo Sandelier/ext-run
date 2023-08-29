@@ -40,6 +40,7 @@ Web-forge uses the following librarys:
 - [Commander](https://www.npmjs.com/package/commander). Used to create commands easily.
 - [uuid](https://www.npmjs.com/package/uuid). Used to generate an unique temporary folder.
 - [ws](https://www.npmjs.com/package/ws). Used to create websockets.
+- [ps-list](https://www.npmjs.com/package/ps-list). Used to check if pid is on use to determine should we remove the stale temp folder.
 
 ### Plans
 Current plans are:
