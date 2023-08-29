@@ -115,3 +115,10 @@ node_modules/commander/lib/option.js
 node_modules/commander/lib/suggestSimilar.js
 node_modules/commander/typings/esm.d.mts
 node_modules/commander/typings/index.d.ts
+node_modules/ps-list/index.d.ts
+node_modules/ps-list/index.js
+node_modules/ps-list/license
+node_modules/ps-list/package.json
+node_modules/ps-list/readme.md
+node_modules/ps-list/vendor/fastlist-0.3.0-x64.exe
+node_modules/ps-list/vendor/fastlist-0.3.0-x86.exe
