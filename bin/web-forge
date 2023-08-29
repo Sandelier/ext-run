@@ -2,6 +2,7 @@
 
 const createTempExtension = require('./handleExtensionFolder.js');
 const { createServer } = require('./server.js');
+const { removeStaleTempFolders } = require('./removeStaleTemps.js');
 const pathLib = require('path');
 const fs = require('fs');
 const fspr = require('fs').promises;
@@ -65,7 +66,7 @@ async function Webforge(browser, path, args) {
     } catch (error) {
         console.log(error);
     } finally {
-        await cleanUp(tempDirPath);
+        await cleanUp();
     }
 }
 
@@ -111,21 +112,21 @@ function getBrowserPath(browser) {
     return null;
 }
 
-async function cleanUp(tempDirPath) {
+async function cleanUp() {
     for (const browser of browserProcesses) {
         browser.kill();
     }
     if (server) {
         server.close();
     }
-    await removeTempDir(tempDirPath);
+    await removeStaleTempFolders(tempDirPath);
     process.exit(0);
 }
 
 process.on('SIGINT', async () => {
     if (programLock) {
         try {
-            await cleanUp(tempDirPath);
+            await cleanUp();
           } catch (error) {
             console.error('Error during cleanup:', error);
             process.exit(1);
@@ -136,27 +137,28 @@ process.on('SIGINT', async () => {
   });
 
 
-async function removeTempDir(tempDirPath) {
-        // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
-    const pattern = new RegExp(/\\web-forge\\temp\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
-    
-    if (pattern.test(tempDirPath) && fs.existsSync(tempDirPath)) {
-        // Have to have because the browser might be using userfolder for couple seconds still after shutting down which would cause permission issues.
-        let attempts = 0;
-        while (attempts < 10) {
-            try {
-                fs.rmSync(tempDirPath, { recursive: true });
-                break;
-            } catch (deleteError) {
-                //console.error(`Error deleting ${tempDirPath}: ${deleteError}`);
-            }
-            attempts++;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-    } else {
-        console.log('Invalid temp extension folder path or folder does not exist.', tempDirPath);
-    }
-}
+
+//async function removeTempDir(tempDirPath) {
+//        // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
+//    const pattern = new RegExp(/\\web-forge\\temp\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
+//    
+//    if (pattern.test(tempDirPath) && fs.existsSync(tempDirPath)) {
+//        // Have to have because the browser might be using userfolder for couple seconds still after shutting down which would cause permission issues.
+//        let attempts = 0;
+//        while (attempts < 10) {
+//            try {
+//                fs.rmSync(tempDirPath, { recursive: true });
+//                break;
+//            } catch (deleteError) {
+//                //console.error(`Error deleting ${tempDirPath}: ${deleteError}`);
+//            }
+//            attempts++;
+//            await new Promise(resolve => setTimeout(resolve, 1000));
+//        }
+//    } else {
+//        console.log('Invalid temp extension folder path or folder does not exist.', tempDirPath);
+//    }
+//}
 
 // Returns valid browsers based on browser input and browsermapping.
 function validateBrowser(browser) {
