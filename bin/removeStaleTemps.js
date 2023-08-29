@@ -2,6 +2,9 @@ const psList = require('pd-list');
 const fs = require('fs').promises;
 const path = require('path');
 
+// NNot tested
+// Have to modify because pid is an array in the file so have to split by ,
+
 async function removeStaleTempFolders(tempDirPath) {
     try {
         const files = fs.readdir(tempDirPath);
