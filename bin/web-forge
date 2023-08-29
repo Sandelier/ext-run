@@ -4,13 +4,15 @@ const createTempExtension = require('./handleExtensionFolder.js');
 const { createServer } = require('./server.js');
 const pathLib = require('path');
 const fs = require('fs');
+const fspr = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 const { spawn } = require('child_process');
 const { program } = require('commander');
 const WebSocket = require('ws');
 
 const tempDirName = `temp_${uuidv4()}`;
-const tempDirPath = pathLib.join(__dirname, tempDirName);
+const parentDir = pathLib.dirname(__dirname);
+const tempDirPath = pathLib.join(parentDir, 'temp', tempDirName);
 
 let browserProcesses = [];
 
@@ -18,8 +20,10 @@ async function Webforge(browser, path, args) {
     path = path || process.cwd()
     try {
         await checkPortsAndCreate();
+        console.log(`Listening on port ${serverPort.port}`);
         if (server) {
-            console.log(`Listening on port ${serverPort.port}`)
+            // Makes the temp/temp_uuid directory here.
+            await fspr.mkdir(tempDirPath, { recursive: true });
             await createTempExtension(path, tempDirPath, serverPort.port);
             server = createServer(path, tempDirPath, server);
 
@@ -36,6 +40,9 @@ async function Webforge(browser, path, args) {
 
                     const browserProcess = spawn(browserPath, launchOptions);
                     browserProcesses.push(browserProcess);
+
+                    // Pid used so we can remove stale temp folders.
+                    await fspr.writeFile(pathLib.join(tempDirPath, "process"), browserProcess.pid.toString());
 
                     return new Promise((resolve) => {
                         browserProcess.on('close', (code) => {
@@ -131,7 +138,7 @@ process.on('SIGINT', async () => {
 
 async function removeTempDir(tempDirPath) {
         // Safe mechanism so that the path has to end with /web-forge/bin/temp_(random uuid) 
-    const pattern = new RegExp(/\\web-forge\\bin\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
+    const pattern = new RegExp(/\\web-forge\\temp\\temp_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
     
     if (pattern.test(tempDirPath) && fs.existsSync(tempDirPath)) {
         // Have to have because the browser might be using userfolder for couple seconds still after shutting down which would cause permission issues.

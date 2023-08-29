@@ -28,7 +28,6 @@ async function copyDirectory(source, destination) {
 async function createTempExtension(ext, tempDirPath, port) {
     let manifestLock = false;
     try {
-        await fs.mkdir(tempDirPath);
         await fs.mkdir(path.join(tempDirPath, 'userFolder'));
         await fs.mkdir(path.join(tempDirPath, 'extension'));
         const files = await fs.readdir(ext);
@@ -62,6 +61,7 @@ async function createTempExtension(ext, tempDirPath, port) {
 
 // Modifies the manifest to include the background script.
 async function modifyManifest(extFilePath, tempDirPath, port) {
+
     const manifestContent = await fs.readFile(extFilePath, 'utf-8');
     const parsedManifest = JSON.parse(manifestContent);
 
