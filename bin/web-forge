@@ -28,6 +28,7 @@ async function Webforge(browser, path, args) {
             await createTempExtension(path, tempDirPath, serverPort.port);
             server = createServer(path, tempDirPath, server);
 
+            const browserPids = [];
             // Starts up browsers with arguments.
             const browserPromises = browser.map(async (browserName) => {
                 const browserPath = getBrowserPath(browserName);
@@ -41,9 +42,7 @@ async function Webforge(browser, path, args) {
 
                     const browserProcess = spawn(browserPath, launchOptions);
                     browserProcesses.push(browserProcess);
-
-                    // Pid used so we can remove stale temp folders.
-                    await fspr.writeFile(pathLib.join(tempDirPath, "process"), browserProcess.pid.toString());
+                    browserPids.push(browserProcess.pid);
 
                     return new Promise((resolve) => {
                         browserProcess.on('close', (code) => {
@@ -60,6 +59,9 @@ async function Webforge(browser, path, args) {
                     console.log(`Unable to find a valid path for ${browserName}`);
                 }
             });
+            // Pid used so we can remove stale temp folders.
+            await fspr.writeFile(pathLib.join(tempDirPath, "process"), browserPids.toString());
+
             // Waiting for all promises because if we dont use promises the finally block will be executed immediately because everything is asyncronous.
             await Promise.all(browserPromises);
         }
