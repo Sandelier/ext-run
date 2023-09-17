@@ -1,10 +1,10 @@
 {
-  "name": "web-forge",
+  "name": "ext-run",
   "version": "1.0.0",
   "description": "",
   "main": "main/main.js",
   "bin": {
-    "web-forge": "./bin/web-forge"
+    "ext-run": "./bin/ext-run"
   },
   "preferGlobal": true,
   "author": "",

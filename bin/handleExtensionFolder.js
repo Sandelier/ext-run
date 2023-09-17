@@ -79,7 +79,7 @@ async function modifyManifest(extFilePath, tempDirPath, port) {
 
     parsedManifest.background = parsedManifest.background || {};
     parsedManifest.background.scripts = parsedManifest.background.scripts || [];
-    parsedManifest.background.scripts.push("web-forge-AutoReloadBackground.js");
+    parsedManifest.background.scripts.push("ext-run-AutoReloadBackground.js");
 
     const newConnections = `ws://localhost:${port}`;
 
@@ -104,8 +104,8 @@ async function modifyManifest(extFilePath, tempDirPath, port) {
 
 async function addBackgroundScript(tempPathFile, port) {
     const tempPathFolder = path.dirname(tempPathFile);
-    const backgroundScriptPath = path.join(__dirname, "web-forge-AutoReloadBackground.js");
-    const destPath = path.join(tempPathFolder, "web-forge-AutoReloadBackground.js");
+    const backgroundScriptPath = path.join(__dirname, "ext-run-AutoReloadBackground.js");
+    const destPath = path.join(tempPathFolder, "ext-run-AutoReloadBackground.js");
 
     // Modifying the port on backgroundScript to use the current port.
     try {

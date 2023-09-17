@@ -199,7 +199,7 @@ function validateBrowser(browser) {
 
 
 program
-    .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br. You can also put browsers into string to launch multiple -b "chrome,edge".')
+    .option('-b, --browser <browser>', 'Launch specific browser. Accepts chrome/ch/edge/msedge/brave/br. You can also put browsers into string to launch multiple -b "chrome,edge". You can also put the exe path of the browser to it.')
     .option('-p, --path <path>', 'Path to extension. Defaults to current folder if no path is given.')
     .option('-args, --arguments <args>', 'Extra arguments as a string')
     .option('-help, --help', 'Shows available arguments.')
@@ -208,8 +208,8 @@ program
 program.on('--help', () => {
     console.log('')
     console.log('Examples:');
-    console.log('   web-forge -b chrome -args "--kiosk"');
-    console.log('   web-forge -b edge -p "path/to/extension"');
+    console.log('   ext-run -b chrome -args "--kiosk"');
+    console.log('   ext-run -b edge -p "path/to/extension"');
     console.log('');
     process.exit(0);
 });
